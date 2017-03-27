@@ -1,6 +1,6 @@
 {
   "name": "ethereum-web3-plus",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Adds some simplifications to the web3 package such as compilation, instance creation, call sequencing, events readers",
   "main": "index.js",
   "scripts": {
