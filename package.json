@@ -15,5 +15,13 @@
   "license": "ISC",
   "dependencies": {
     "web3": "^0.18.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/guenoledc/ethereum-web3-plus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/guenoledc/ethereum-web3-plus/issues"
+  },
+  "homepage": "https://github.com/guenoledc/ethereum-web3-plus/my_package"
 }
