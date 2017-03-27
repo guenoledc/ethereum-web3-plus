@@ -232,6 +232,9 @@ This is a simple addOn to web3 to collect 2 fields from the transaction and add 
 - txtarget: the address of the account or contract to which the transaction was sent. eth.getTransaction(hash).to.
 
 ## Change log
+### v 0.2.8
+Just republish to NPM with the correct documentation
+
 ### v 0.2.7
 - Added to github
 - The EventSynchronizer now sets a historyToBlock variable to the current block at the time of requesting the history or starting the watch so that there are no duplicate between the history request and the watch scope.
