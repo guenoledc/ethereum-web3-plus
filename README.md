@@ -1,10 +1,9 @@
 # Documentation page for ethereum-web3-plus
 
 Package that sits on top of web3 package by frozeman.
-This package adds 2 main functionalities:
-- The Solidity compilation simplified with automatic linkeage of libraries and contract deployment simplification
-- A block watcher and a waitFor (and waitForAll from version 0.2.2)function to get notified when a submitted transaction is completed and considered canonical. 
-Note that in this version the solidity compiler is the one loaded by the geth node.
+This package adds 3 main functionalities:
+- The Solidity compilation simplified with automatic linkeage of libraries and contract deployment simplification and quick to use functions added to the Web3 prototype.
+- A block watcher and a waitFor (and waitForAll from version 0.2.2) function to get notified when a submitted transaction(s) is(are) completed and considered canonical. Note that in this version the solidity compiler is the one loaded by the geth node.
 - A simplified eventSynchronizer (from version 0.2.4) that mixed with the [multi-http-provider] auto resubscribe capability makes life easier to get the history of events from the blocks and listen to new ones. 
 
 
@@ -65,7 +64,7 @@ compiler.displayMissingLibs(); // display libraries that have not been found in 
 output: Compiled Example code length: 1440
 ```
 
-### Using the contract functions
+### Using the contract functions (newInstanceTx and instanceAt)
 ```js
 // request the publication of the contract. Returns the tx hash of that request
 var tx = web3.newInstanceTx("Example", any constructor params);
@@ -73,6 +72,13 @@ var tx = web3.newInstanceTx("Example", any constructor params);
 // convert a contract address into an javascript object
 var address = "0x4435dee6dd53ffad11cf4ebb85cea2e51ea62434";
 var E = web3.instanceAt("Example", address);
+```
+### Getting a deployed library (instanceLibrary)
+To get a web3 instance of a library deployed with web3.solidityCompiler.addDeployedLib. Usefull to get the lib in a different module than the one where you set the address.
+```js
+var compiler = web3.solidityCompiler();
+compiler.addDeployedLib("MapString", "0x48f59e9fbce7880a11acd90dc2f99b28accc47f6");
+var MapString = web3.instanceLibrary("MapString");
 ```
 
 ### Using the block watcher functionalities
@@ -119,7 +125,9 @@ waitFor takes the following parameters:
 - N+2 : (optional) an object with the following attributes 
       - canonicalAfter: <number>, default=0. tells the watcher to call the callback only canonicalAfter blocks after the transaction has been mined. This allow to control possible small soft forks and be sure to get valid transactions.
       - dropAfter: <number>, default=99999999. tells the watcher to drop this transaction if not mined after dropAfter blocks. This in case the local node has been killed before sending the tx to other nodes and/or the watcher loosing the events listener. 
+      - startBlock: <number>, default=eth.blockNumber. tells from which block number interpret the above options. (from version 0.2.7)
 ```
+Note that if you pass a transaction hash that has been done in the past (blocks before the current block) then the waitFor will still activate the callback after verifying the status of the transaction. I.e. you can call this function to check the status of an old transaction.
 
 ### web3.waitForAll (from version 0.2.2) 
 works like waitFor except that it takes an array of txHash as first parameter
@@ -204,6 +212,8 @@ In the log message 2 fields are added (vs the web3 model)
 - isNew : false when received via the historyFromBloc and true if received via the startWatching
 - contract : name of the contract as in the compilation process
 
+The call set the historyToBlock attribute of the EventSynchronizer to the current block number and the history will return the events matching the filter between the provided fromBlock and the historyToBlock. This filed is also used in the watching.
+
 ### web3.eventSynchronizer - Watching (from version 0.2.4)
 in the same way as above, you can get notifications when new events matching the filters are stored in the blockchain.
 ```js
@@ -213,7 +223,8 @@ es.startWatching(function(error, log) {
 
 setTimeout(function(){  es.stopWatching();   }, 5000); // stop after 5 seconds 
 ```
-The log object has the same format as above, but the isNew flag is set to true.
+The log object has the same format as above, but the isNew flag is set to true. 
+The watching subscribes to future events from block historyToBlock __+1__ to 'latest'.
 
 ### web3.completeLog  (from version 0.2.4)
 This is a simple addOn to web3 to collect 2 fields from the transaction and add them to the log:
@@ -222,10 +233,15 @@ This is a simple addOn to web3 to collect 2 fields from the transaction and add 
 
 ## Change log
 ### v 0.2.7
-- 
+- Added to github
+- The EventSynchronizer now sets a historyToBlock variable to the current block at the time of requesting the history or starting the watch so that there are no duplicate between the history request and the watch scope.
+- The newInstanceTx has been change to only send the "estimateGas" amount of gas rather than "gasLimit". The previous version is kept under web3.newInstanceTxOld in case you have trouble with the amount of gas.
+- creation of web3.instanceLibrary to retieve a web3 instance of a deployed library. 
+- addition of the fromBlock option in the waitFor function.
 - bug corrections
    - change name of historyFromBlock
    - control of a valid callback before calling
+   - reset of the filter in the block watcher when stopping.
 
 ### v 0.2.6 and v 0.2.5
 - Documentation corrections
