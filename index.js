@@ -9,78 +9,9 @@
 
 // assumes that the web3 variable is initialized outside this package and connected to a node.
 if(!module.parent) {console.log("use require() to load this package"); return; }
-var fs=require('fs');
 var Web3 = module.parent.require('web3');
 var EventSynchronizer = require("./event-watcher.js");
-
-var SolidityCompiler = function(web3) {
-	this.web3 = web3; // instance of the connection to the geth node
-	this.DeployedLib = {} ; // a map of library name to their deployed address
-	this.DictContract= {} ; // a map with the result of the compilation and what is needed for the initialization
-	this.LibToken={}; // a map of the library name to their token in the compiled class to do the replacing
-	this.MissingLibs={}; // a map with the tokens found in the code after replacement
-}
-SolidityCompiler.prototype.compile = function(sourceFile) {
-	this.compileInline('import "'+sourceFile+'";');
-}
-SolidityCompiler.prototype.compileInline = function(sourceInline) {
-	var eth=this.web3.eth;
-	var filled = "________________________________________"; // used for lib token creation below
-	var compiled = eth.compile.solidity(sourceInline);
-	for( var obj in compiled ) {
-		var name=obj.split(":")[1];
-		this.DictContract[name] = {
-			abi: compiled[obj].info.abiDefinition,
-			code: compiled[obj].code,
-			contract: eth.contract(compiled[obj].info.abiDefinition) };
-		this.LibToken[name]= ("__"+obj.substr(0,36)+filled).substr(0,40); // 40 is the size of the target address
-	}
-	// replacing the lib totens with their address in all compiled contracts
-	var reLib = /__.*?__+/g;
-	for(name in this.DictContract) {
-		for(lib in this.DeployedLib) {
-			var rex=RegExp(this.LibToken[lib], "g"); // match "__<source of the lib cut at 36 char>__"
-			this.DictContract[name].code=this.DictContract[name].code.replace(rex, this.DeployedLib[lib].replace("0x",""));
-		}
-		var m=reLib.exec(this.DictContract[name].code);
-		while(m) {
-			if(!this.MissingLibs[m[0]]) this.MissingLibs[m[0]]={count:0, contracts:[]};
-			this.MissingLibs[m[0]].count++;
-			if(this.MissingLibs[m[0]].contracts.indexOf(name)<0)
-				this.MissingLibs[m[0]].contracts.push(name);
-			m = reLib.exec(m["input"]); // find next
-		}
-	}
-}
-SolidityCompiler.prototype.displaySizes = function() {
-	for(e in this.DictContract)
-		console.log("Compiled", e, "code length:", this.DictContract[e].code.length-2); // remove length of "0x"
-}
-SolidityCompiler.prototype.displayMissingLibs = function() {
-	for(l in this.MissingLibs)
-		console.log("Missing library:", l, "in", this.MissingLibs[l].contracts.join(", "));
-}
-SolidityCompiler.prototype.addDeployedLib = function(lib, address) {
-	if(!lib) return false;
-	if(!address) return delete this.DeployedLib[lib];
-	
-	this.DeployedLib[lib]=address;
-	return true;
-}
-SolidityCompiler.prototype.displayDeployedLibs = function() {
-	for(l in this.DeployedLib)
-		console.log("Library", l, ":",this.DeployedLib[l]);
-}
-SolidityCompiler.prototype.getCode = function(contract) {
-	if(!contract) return null;
-	if(!this.DictContract[contract]) return null;
-	return this.DictContract[contract].code;
-}
-SolidityCompiler.prototype.getContract = function(contract) {
-	if(!contract) return null;
-	if(!this.DictContract[contract]) return null;
-	return this.DictContract[contract].contract;
-}
+var SolidityCompiler = require("./solidity-compiler.js");
 
 
 Web3.prototype.solidityCompiler = function() { // here this is the Web3 instance
@@ -116,6 +47,9 @@ Web3.prototype.newInstanceTx = function(){
 	if(!c) return null;
 	// add the ethereum attributes
 	args.push({ data:this.solidityCompiler.getCode(name) });//, gas:this.eth.getBlock('latest').gasLimit });
+	if(args[args.length-1].data.length<=2) // we only have '0x' or less then fail
+		throw new Error("Contract "+name+" has no code found by the compiler. Can't create an instance!");
+	
 	//console.log("args for new before gas", args);
 	var data=c.new.getData.apply(c, args);
 	var gas = this.eth.estimateGas({data:data});
