@@ -73,7 +73,7 @@ var internalCallbackArray = function(error, logs) {
 
 // callback must be function(Error, Log) Log is completed with contract, isNew, txSender, txTarget
 EventSynchronizer.prototype.historyFromBlock = function(fromBlock, callback) {
-	if(this.events.length==0) if(callback) callback("No event registered!", null);
+	if(this.events.length==0) { if(callback) callback("No event registered!", null); return;}
 	this.historyToBlock = this.events[0].instance._eth.blockNumber;
 	var toBlock = (+this.historyToBlock);
 	for(var i=0; i<this.events.length; i++) {

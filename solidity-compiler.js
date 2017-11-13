@@ -4,7 +4,7 @@
 // Created by G. de Cadoudal - march 2017
 // creates a cache of the contracts, allow compilation and loading from local folder
 //#########################################################################################
-
+var path=require('path');
 var SolidityCompiler = function(web3) {
 	this.web3 = web3; // instance of the connection to the geth node
 	this.DeployedLib = {} ; // a map of library name to their deployed address
@@ -80,7 +80,7 @@ SolidityCompiler.prototype.compileInline = function(sourceInline) {
 	}
 	this.linkAll();
 }
-const solidityFolder = process.env.PWD+"/.ethereum_contracts";
+const solidityFolder = path.resolve(process.env.PWD,".ethereum_contracts");
 // save the ABI and Code (unlinked) to a folder for reloading without compilation
 SolidityCompiler.prototype.persist = function() {
 	const fs=require("fs");
@@ -89,14 +89,14 @@ SolidityCompiler.prototype.persist = function() {
 	const self=this;
 	Object.keys(this.DictContract).forEach(function(contract) {
 		// same format generation as what solc --bin --abi Contract.sol would generate.
-		fs.writeFileSync(solidityFolder+"/"+contract+".abi", JSON.stringify(self.DictContract[contract].abi));
-		fs.writeFileSync(solidityFolder+"/"+contract+".bin", self.DictContract[contract].unlinkedCode.substr(2));
+		fs.writeFileSync(path.resolve(solidityFolder, contract+".abi"), JSON.stringify(self.DictContract[contract].abi));
+		fs.writeFileSync(path.resolve(solidityFolder, contract+".bin"), self.DictContract[contract].unlinkedCode.substr(2));
 	});
 }
 SolidityCompiler.prototype.load = function(contract) {
 	const fs=require("fs");
 	if(! fs.existsSync(solidityFolder)) throw new Error("a folder "+solidityFolder+" is expected to locate the contract abi and binary" );
-	const abifile = solidityFolder+"/"+contract+".abi";
+	const abifile = path.resolve(solidityFolder,contract+".abi");
 	if(fs.existsSync(abifile)) {
 		const abi = JSON.parse(fs.readFileSync(abifile));
 		this.DictContract[contract] = {
@@ -106,7 +106,7 @@ SolidityCompiler.prototype.load = function(contract) {
             code:'0x'
 		};
 		//this.LibToken[contract]= ("__"+obj.substr(0,36)+"_".repeat(38)).substr(0,40); // 40 is the size of the target address
-		const binfile=solidityFolder+"/"+contract+".bin";
+		const binfile= path.resolve(solidityFolder, contract+".bin");
 		if(fs.existsSync(binfile)) {
 			const code="0x"+fs.readFileSync(binfile).toString();
 			this.DictContract[contract].unlinkedCode=code;
