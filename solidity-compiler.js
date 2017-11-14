@@ -80,7 +80,8 @@ SolidityCompiler.prototype.compileInline = function(sourceInline) {
 	}
 	this.linkAll();
 }
-const solidityFolder = path.resolve(process.env.PWD,".ethereum_contracts");
+
+const solidityFolder = path.resolve(process.cwd(),".ethereum_contracts");
 // save the ABI and Code (unlinked) to a folder for reloading without compilation
 SolidityCompiler.prototype.persist = function() {
 	const fs=require("fs");

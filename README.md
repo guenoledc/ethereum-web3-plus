@@ -247,6 +247,12 @@ This is a simple addOn to web3 to collect 2 fields from the transaction and add 
 - txtarget: the address of the account or contract to which the transaction was sent. eth.getTransaction(hash).to.
 
 ## Change log
+### v 0.3.2
+Correction of the use of environemnt variable process.env.PWD by process.cwd() as the earlier is not available on windows.
+
+### v 0.3.1
+Correction of the path resolution for windows compatibility
+
 ### v 0.3.0
 Important modification in the solidityCompiler object
 - separation in a different module (solidity-compiler.js)
