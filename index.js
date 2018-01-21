@@ -42,7 +42,7 @@ Web3.prototype.newInstanceTxOld = function(){
 Web3.prototype.newInstanceTx = function(){
 	var args=Array.prototype.slice.call(arguments);
 	var name=args.shift(); // extract the name and leave the rest
-	if(typeof this.solidityCompiler !== 'object') return null; // the compiler has not been created
+	if(typeof this.solidityCompiler !== 'object') this.solidityCompiler(); // the compiler has not been created
 	var c = this.solidityCompiler.getContract(name);
 	if(!c) return null;
 	// add the ethereum attributes
@@ -55,13 +55,13 @@ Web3.prototype.newInstanceTx = function(){
 	var gas = this.eth.estimateGas({data:data});
 	//console.log("args for new", args);
 	// call the new function. there is no callback so the return value is the TxHash
-	var tx= this.eth.sendTransaction({data:data, gas:gas});
+	var tx= this.eth.sendTransaction({data:data, gas:gas+1});
 	return tx;
 }
 
 
 Web3.prototype.instanceAt = function(name, address) {
-	if(typeof this.solidityCompiler !== 'object') return null; // the compiler has not been created
+	if(typeof this.solidityCompiler !== 'object') this.solidityCompiler(); // the compiler has not been created
 	var c = this.solidityCompiler.getContract(name);
 	if(!c) return null;
 	return c.at(address);
@@ -105,6 +105,14 @@ var extractOptions = function (args) {
 	return options;
 };
 
+/** This is to enable the new field status in the transactionreceipt even if not present in the underlying Geth node */
+function upgradeReceipt(receipt) {
+	if(!receipt) return receipt;
+	if(typeof receipt.status === 'undefined') 
+		receipt.status=1;
+	return receipt;
+}
+
 var BlockWatcher = function(web3, bindEnvironment) {
 	var self=this;
 	this.web3 = web3
@@ -127,7 +135,7 @@ var BlockWatcher = function(web3, bindEnvironment) {
 						            var txwait = self.tx_wait[txHash];
 						            console.log("transaction watched found", txHash, "waiting",txwait.canonicalAfter,"block(s)");
 									txwait.startBlock=block.number;
-									txwait.receipt=self.web3.eth.getTransactionReceipt(txHash);
+									txwait.receipt=upgradeReceipt(self.web3.eth.getTransactionReceipt(txHash));
 						       } // end if tx exists in the wait dictionary
 						   } // end for each transaction
 						   
@@ -138,7 +146,7 @@ var BlockWatcher = function(web3, bindEnvironment) {
 						   
 							  // to protect against a case where the receipt would not be loaded while available, load it if 2 blocks have passed
 						      if(!txwait.receipt && block.number >= txwait.startBlock + 2) {
-						           txwait.receipt=self.web3.eth.getTransactionReceipt(tx);
+						           txwait.receipt=upgradeReceipt(self.web3.eth.getTransactionReceipt(tx));
 						           if(txwait.receipt) txwait.startBlock=txwait.receipt.blockNumber; // update the startBlock
 						      }
 						      // process the normal situation where the tx is mined and the tx is cannonical
@@ -149,12 +157,14 @@ var BlockWatcher = function(web3, bindEnvironment) {
 						              var cb_args = txwait.args;
 						              cb_args.unshift(tx);
 						              cb_args.push(receipt.contractAddress || receipt.to);
-						              if(txwait.gas<=receipt.gasUsed)
-						              cb_args.push("full gas used:"+receipt.gasUsed)
-						              else if(receipt.contractAddress
-								              && self.web3.eth.getCode(receipt.contractAddress)=="0x")
-						                   cb_args.push("created contract has no bytecodes");
-						              else cb_args.push(null); // No error
+									  //if(receipt.status==0) // failure returned 	 
+										if(txwait.gas<=receipt.gasUsed)
+											cb_args.push("full gas used:"+receipt.gasUsed)
+										else if(receipt.contractAddress
+												&& self.web3.eth.getCode(receipt.contractAddress)=="0x")
+											cb_args.push("created contract has no bytecodes");
+										else if(receipt.status==0) cb_args.push("another failure has happened.");
+										else cb_args.push(null); // No error
 						              // remove the txHash from the wait dictionary
 						              delete self.tx_wait[tx];
 									   // manage the case of a group
@@ -192,15 +202,14 @@ var BlockWatcher = function(web3, bindEnvironment) {
 						   } // end if no error
 						   });
 	this.start = function() {
-		if(this.filter) { this.filter.stopWatching(); this.filter=null; } // clear any previous watching and filter
+		this.stop(); // clear any previous watching and filter
 		if(!this.filter) this.filter = this.web3.eth.filter('latest');
 		console.log("Starting the block watcher");
 		this.filter.watch(this.newBlock);
 		//this.loadState();
 	}
 	this.stop = function() {
-		this.filter.stopWatching();
-		this.filter=null;
+		if(this.filter) { this.filter.stopWatching(); this.filter=null; } 
 	}
 	
 	this.waitFor = function(txHash, gas, args, callback, options) {
@@ -239,6 +248,12 @@ Web3.prototype.waitFor = function() {
 	if(!callback) return false; // no point in doing something there is no callback
 	var txHash = args.shift() ; // first param is the tx Hash
 	if(isArray(txHash)) return this.waitForAll.apply(this, arguments);
+	if(!txHash) { // the first argument is not an existing txHash !!
+		args.unshift(txHash);
+		args.push(null);
+		args.push("not a valid txHash."+txHash);
+		return callback.apply(null,args);
+	}
 	var tx=this.eth.getTransaction(this.toHex(txHash));
 	if(!tx) { // the first argument is not an existing txHash !!
 		args.unshift(txHash);
