@@ -125,7 +125,7 @@ var BlockWatcher = function(web3, bindEnvironment) {
 						   console.log("error captured in the block watcher. stop and restart.", err);
 						   self.stop();
 						   self.start();
-						   } else {
+						   } else try {
 						   var block = self.web3.eth.getBlock(blockHash, false);
 						   //console.log("new block ", block.number);
 						   
@@ -198,7 +198,11 @@ var BlockWatcher = function(web3, bindEnvironment) {
 						             callback.apply(null, cb_args);
 						       }
 						   }
-						   //self.saveState();
+						   
+						   } catch(catched) {
+							   console.log("An error occured during processing blockhash ", blockHash);
+							   console.log(catched);
+							   // now wait for the next block
 						   } // end if no error
 						   });
 	this.start = function() {

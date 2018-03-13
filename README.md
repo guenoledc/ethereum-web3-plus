@@ -247,6 +247,10 @@ This is a simple addOn to web3 to collect 2 fields from the transaction and add 
 - txtarget: the address of the account or contract to which the transaction was sent. eth.getTransaction(hash).to.
 
 ## Change log
+
+### v 0.4.2
+- Adding a try catch in the block watcher for when the geth api do not return properly
+
 ### v 0.4.1
 Adaptation for TransactionReceipt.status from geth v1.7.3 used in the waitFor function to signal error
 Other minor bug corrections
@@ -281,6 +285,7 @@ Just republish to NPM with the correct documentation
    - change name of historyFromBlock
    - control of a valid callback before calling
    - reset of the filter in the block watcher when stopping.
+
 
 ### v 0.2.6 and v 0.2.5
 - Documentation corrections
