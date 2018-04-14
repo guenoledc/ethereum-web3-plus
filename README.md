@@ -97,6 +97,8 @@ var MapString = web3.instanceLibrary("MapString");
 ```
 
 ### Using the block watcher functionalities
+_**NOTE:** The watcher is registered asynchronously but the BlockWatcherStart function returns immediatly. Be aware of this as it may happen that the watcher is initialized after the first transaction is submitted._
+
 ```js
 bw= web3.BlockWatcherStart(func);
 ```
@@ -247,6 +249,11 @@ This is a simple addOn to web3 to collect 2 fields from the transaction and add 
 - txtarget: the address of the account or contract to which the transaction was sent. eth.getTransaction(hash).to.
 
 ## Change log
+
+### v 0.4.3
+- While testing Ganache, I found different behavior of getTransaction just after submitting a transaction. It does not exists hence the reading of submitted gas should be delayed.
+- Correct the implementation of TransactionReceipt.status
+- Info: The `web3.BlockWatcherStart()` does not wait for successfull registration of the filter before watching the new blocks. Hence be carefull that you could submit a transaction before the listener is in place and miss it.  
 
 ### v 0.4.2
 - Adding a try catch in the block watcher for when the geth api do not return properly

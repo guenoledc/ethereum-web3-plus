@@ -144,6 +144,13 @@ var BlockWatcher = function(web3, bindEnvironment) {
 						      var txwait = self.tx_wait[tx];
 						      var txgroup = self.tx_group;
 						   
+							  // handle the case where the submitted gas was not retrieved when starting waiting. Found the case with Ganache
+							  if(txwait.gas==0) {
+								var getTx=self.web3.eth.getTransaction(tx);
+								if(getTx) txwait.gas=getTx.gas;
+								// else, the txwait.receipt will also be null
+							  }
+
 							  // to protect against a case where the receipt would not be loaded while available, load it if 2 blocks have passed
 						      if(!txwait.receipt && block.number >= txwait.startBlock + 2) {
 						           txwait.receipt=upgradeReceipt(self.web3.eth.getTransactionReceipt(tx));
@@ -157,16 +164,28 @@ var BlockWatcher = function(web3, bindEnvironment) {
 						              var cb_args = txwait.args;
 						              cb_args.unshift(tx);
 						              cb_args.push(receipt.contractAddress || receipt.to);
-									  //if(receipt.status==0) // failure returned 	 
-										if(txwait.gas<=receipt.gasUsed)
-											cb_args.push("full gas used:"+receipt.gasUsed)
-										else if(receipt.contractAddress
+									  
+									  // test if we are in version where status is implemented
+									  if( receipt.status !== undefined) 
+										  if( self.web3.toDecimal(receipt.status) == 1) 
+											   cb_args.push(null); // No error
+									  	  else
+											if(txwait.gas<=receipt.gasUsed)
+												cb_args.push("full gas used:"+txwait.gas + "/"+ receipt.gasUsed)
+											else if(receipt.contractAddress
+													&& self.web3.eth.getCode(receipt.contractAddress)=="0x")
+												cb_args.push("created contract has no bytecodes");
+											else cb_args.push("Failure has happened. Status="+receipt.status);
+									  else	// status is undefined, use old logic
+											if(txwait.gas<=receipt.gasUsed)
+												cb_args.push("full gas used:"+txwait.gas + "/"+ receipt.gasUsed)
+											else if(receipt.contractAddress
 												&& self.web3.eth.getCode(receipt.contractAddress)=="0x")
-											cb_args.push("created contract has no bytecodes");
-										else if(receipt.status==0) cb_args.push("another failure has happened.");
-										else cb_args.push(null); // No error
+												cb_args.push("created contract has no bytecodes");
+											else cb_args.push(null); // No error
 						              // remove the txHash from the wait dictionary
-						              delete self.tx_wait[tx];
+									  delete self.tx_wait[tx];
+									  
 									   // manage the case of a group
 									   if(txwait.group && txgroup[txwait.group] && txgroup[txwait.group][tx]) {
 											 txgroup[txwait.group].count--; // reduce the number of tx in the group
@@ -260,10 +279,8 @@ Web3.prototype.waitFor = function() {
 	}
 	var tx=this.eth.getTransaction(this.toHex(txHash));
 	if(!tx) { // the first argument is not an existing txHash !!
-		args.unshift(txHash);
-		args.push(null);
-		args.push("the provided txHash does not exists in the geth node. Check your code.");
-		return callback.apply(null,args);
+		// set the submitted gas to 0 and wait for the block loop to get the transaction gas
+		tx = {gas:0};
 	}
 	var gas=tx.gas; // the requested max gas that will be compared to the gasUsed of the transaction receipt
 	if(tx.blockNumber) // if the transaction is already in a block, use it as a start point of watching.
