@@ -94,10 +94,23 @@ SolidityCompiler.prototype.persist = function() {
 		fs.writeFileSync(path.resolve(solidityFolder, contract+".bin"), self.DictContract[contract].unlinkedCode.substr(2));
 	});
 }
+
+function resolveFile(basefolder, contract) {
+    const fs=require("fs");
+	// check contract exists as is in the folder
+	if (fs.existsSync(path.resolve(basefolder,contract+".abi")) ) return contract;
+	// if not check if there is a file that ends with the contract name. solcjs does prefix the files with the solidity file name and I want to ignore this
+	files=fs.readdirSync(basefolder);
+    files=files.filter( file => file.endsWith('_'+contract+'.abi') );
+    if (files.length>0) return files[0].replace('.abi',''); else return null;
+} 
+
 SolidityCompiler.prototype.load = function(contract) {
 	const fs=require("fs");
 	if(! fs.existsSync(solidityFolder)) throw new Error("a folder "+solidityFolder+" is expected to locate the contract abi and binary" );
-	const abifile = path.resolve(solidityFolder,contract+".abi");
+	const contractFile = resolveFile(solidityFolder, contract);
+	if(!contractFile) throw new Error("check you have compiled contract "+contract+"!");
+	const abifile = path.resolve(solidityFolder,contractFile+".abi");
 	if(fs.existsSync(abifile)) {
 		const abi = JSON.parse(fs.readFileSync(abifile));
 		this.DictContract[contract] = {
@@ -107,7 +120,7 @@ SolidityCompiler.prototype.load = function(contract) {
             code:'0x'
 		};
 		//this.LibToken[contract]= ("__"+obj.substr(0,36)+"_".repeat(38)).substr(0,40); // 40 is the size of the target address
-		const binfile= path.resolve(solidityFolder, contract+".bin");
+		const binfile= path.resolve(solidityFolder, contractFile+".bin");
 		if(fs.existsSync(binfile)) {
 			const code="0x"+fs.readFileSync(binfile).toString();
 			this.DictContract[contract].unlinkedCode=code;
@@ -145,6 +158,7 @@ SolidityCompiler.prototype.getCode = function(contract) {
 	try {
         return this.require(contract).code;
     } catch (error) {
+		console.error("Failed loading contract "+contract+" due to error "+error)
         return null;
     }
 }
@@ -153,6 +167,7 @@ SolidityCompiler.prototype.getContract = function(contract) {
 	try {
         return this.require(contract).contract;
     } catch (error) {
+		console.error("Failed loading contract "+contract+" due to error "+error)
         return null;
     }
 }

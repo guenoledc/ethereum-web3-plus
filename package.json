@@ -1,6 +1,6 @@
 {
   "name": "ethereum-web3-plus",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Adds some simplifications to the web3 package such as compilation, instance creation, call sequencing, events readers",
   "main": "index.js",
   "scripts": {
@@ -14,7 +14,7 @@
   "author": "Guénolé de Cadoudal <guenoledc@yahoo.fr>",
   "license": "ISC",
   "dependencies": {
-    "web3": "^0.20.4"
+    "web3": "^0.20.7"
   },
   "repository": {
     "type": "git",

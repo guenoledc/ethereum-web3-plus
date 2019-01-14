@@ -250,6 +250,9 @@ This is a simple addOn to web3 to collect 2 fields from the transaction and add 
 
 ## Change log
 
+### v 0.4.4
+- Adjustment of the compiler bin and abi file loading to handle solcjs file names that includes the solidity file.
+
 ### v 0.4.3
 - While testing Ganache, I found different behavior of getTransaction just after submitting a transaction. It does not exists hence the reading of submitted gas should be delayed.
 - Correct the implementation of TransactionReceipt.status
@@ -292,7 +295,6 @@ Just republish to NPM with the correct documentation
    - change name of historyFromBlock
    - control of a valid callback before calling
    - reset of the filter in the block watcher when stopping.
-
 
 ### v 0.2.6 and v 0.2.5
 - Documentation corrections
